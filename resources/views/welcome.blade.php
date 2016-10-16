@@ -9,6 +9,7 @@
 
         <!-- Fonts -->
         <link href="https://fonts.googleapis.com/css?family=Raleway:100,600" rel="stylesheet" type="text/css">
+        <link href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" rel="stylesheet" type="text/css">
 
         <!-- Styles -->
         <style>
@@ -42,11 +43,11 @@
             }
 
             .content {
-                text-align: center;
+                text-align: left;
             }
 
             .title {
-                font-size: 84px;
+                font-size: 24px;
             }
 
             .links > a {
@@ -66,26 +67,151 @@
     </head>
     <body>
         <div class="flex-center position-ref full-height">
-            @if (Route::has('login'))
-                <div class="top-right links">
-                    <a href="{{ url('/login') }}">Login</a>
-                    <a href="{{ url('/register') }}">Register</a>
-                </div>
-            @endif
 
             <div class="content">
                 <div class="title m-b-md">
-                    Laravel
+                    Product Form
                 </div>
+                <form class="form-inline" action="/save" id="products">
+                    {{ csrf_field() }}
+                    <div class="form-group">
+                        <label for="product_name">Product name :</label>
+                        <input type="text" name="product_name" required id="product_name"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="product_quantity">Quantity in stock:</label>
+                        <input type="number" name="product_quantity" required id="product_quantity"/>
+                    </div>
+                    <div class="form-group">
+                        <label for="product_price"> Price per item:</label>
+                        <input type="text" name="product_price" required id="product_price"/>
+                    </div>
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <button type="submit" class="btn btn-default">Submit</button>
+                        </div>
+                    </div>
+                </form>
+                <div class="title m-b-md">
+                    Product List
+                </div>
+                <table class="table table-striped" id="products_list">
+                    <thead>
+                    <tr>
+                        <td>Product id</td>
+                        <td>Product name</td>
+                        <td>Quantity in stock</td>
+                        <td>Price per item</td>
+                        <td>Datetime submitted</td>
+                        <td>Total value number</td>
+                    </tr>
+                    </thead>
+                    <tbody>
 
-                <div class="links">
-                    <a href="https://laravel.com/docs">Documentation</a>
-                    <a href="https://laracasts.com">Laracasts</a>
-                    <a href="https://laravel-news.com">News</a>
-                    <a href="https://forge.laravel.com">Forge</a>
-                    <a href="https://github.com/laravel/laravel">GitHub</a>
-                </div>
+                    </tbody>
+                    <tfoot></tfoot>
+                </table>
             </div>
+
+
         </div>
+
     </body>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.2/jquery.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script lang="javascript">
+        $(document).ready(function(){
+            $("#products").submit(function(){
+                var form=$(this);
+                $.ajax({
+                    url: '/save',
+                    data: form.serialize(),
+                    dataType: "json",
+                    type:"GET"
+                }).done(function(data) {
+                    if(data.success){
+
+                        var quantities= 0,price=parseFloat(form.find('[name="product_price"]').val()),
+                            quantity=parseInt(form.find('[name="product_quantity"]').val());
+                        $("#products_list tbody")
+                                .prepend(
+                                        $("<tr>")
+                                                .append($("<td>").html(form.find('[name="product_name"]').val()))
+                                                .append($("<td>").html(form.find('[name="product_quantity"]').val()))
+                                                .append($("<td>").html(form.find('[name="product_price"]').val()))
+                                                .append($("<td class='total'>").html(price*quantity))
+                                );
+                        if($("#products_list tbody tr").length==1){
+                            $("#products_list tbody")
+                                    .append(
+                                            $("<tr>")
+                                                    .append($("<td>").html(""))
+                                                    .append($("<td>").html(""))
+                                                    .append($("<td>").html(""))
+                                                    .append($("<td id='total'>").html(price*quantity))
+
+                                    );
+                        }
+
+                        $(".total").each(function(){
+                            quantities+=parseFloat($(this).text());
+                        });
+                        $("#total").text(quantities)
+
+                    }
+
+
+                });
+
+               return false;
+            });
+
+
+        });
+        $.ajax({
+            url: '/get',
+            type:"GET"
+        }).done(function(data) {
+            var products=JSON.parse(data),quantity=0;
+        $.each(products,function(key,val){
+            var total=parseInt(val.product_quantity)*parseFloat(val.product_price);
+            quantity+=total;
+            var date = new Date(val.added_date*1000);
+
+            var hours = date.getHours();
+
+            var minutes = "0" + date.getMinutes();
+
+            var seconds = "0" + date.getSeconds();
+
+            var formattedTime = date.getFullYear() + '-' + date.getMonth() + '-' + date.getDate();
+             formattedTime += " "+hours + ':' + minutes.substr(-2) + ':' + seconds.substr(-2);
+            $("#products_list tbody")
+                    .append(
+                            $("<tr>")
+                                    .append($("<td>").html(val.added_date))
+                                    .append($("<td>").html(val.product_name))
+                                    .append($("<td>").html(val.product_quantity))
+                                    .append($("<td>").html(val.product_price))
+                                    .append($("<td>").html(formattedTime))
+                                    .append($("<td class='total'>").html(total))
+                    );
+        });
+
+            $("#products_list tbody")
+                    .append(
+                            $("<tr>")
+                                    .append($("<td>").html(""))
+                                    .append($("<td>").html(""))
+                                    .append($("<td>").html(""))
+                                    .append($("<td>").html(""))
+                                    .append($("<td>").html(""))
+                                    .append($("<td id='total'>").html(quantity))
+
+                    );
+
+
+
+        });
+    </script>
 </html>
